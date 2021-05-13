@@ -85,12 +85,20 @@ async def schedule(message: types.Message):
 
 @dp.message_handler(lambda message: message.text == 'Сегодня')
 async def today(message: types.Message):
-    await message.answer(get_schedule(message.date + datetime.timedelta(hours=5)))  # TODO: поправить часовой пояс
+    text = get_schedule(message.date + datetime.timedelta(hours=5))
+    if text:
+        await message.answer(text)  # TODO: поправить часовой пояс
+    else:
+        await message.answer('Пар нет :3')
 
 
 @dp.message_handler(lambda message: message.text == 'Завтра')
 async def tomorrow(message: types.Message):
-    await message.answer(get_schedule(message.date + datetime.timedelta(days=1, hours=5)))
+    text = get_schedule(message.date + datetime.timedelta(days=1, hours=5))
+    if text:
+        await message.answer(text)
+    else:
+        await message.answer('Пар нет :3')
 
 
 @dp.message_handler(lambda message: message.text == 'Другой день')
@@ -101,8 +109,12 @@ async def other_day(message: types.Message):
 @dp.callback_query_handler(simple_cal_callback.filter())
 async def process_simple_calendar(callback_query: types.CallbackQuery, callback_data: dict):
     selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+    text = get_schedule(date + datetime.timedelta(days=1))
     if selected:
-        await callback_query.message.answer(get_schedule(date + datetime.timedelta(days=1)))
+        if text:
+            await callback_query.message.answer(text)
+        else:
+            await callback_query.message.answer('Пар нет :3')
 
 
 if __name__ == '__main__':
