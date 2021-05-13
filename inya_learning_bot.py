@@ -2,10 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 from aiogram import Bot, Dispatcher, executor, types
 import datetime
-import pytz
+from aiogram_calendar import SimpleCalendar, simple_cal_callback
 
 API_TOKEN = '1767109592:AAHPy8GabHwBMirbfad6xWNdLknKSIbWUAw'
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=API_TOKEN, timeout=100)
 dp = Dispatcher(bot)
 
 
@@ -69,29 +69,41 @@ def get_schedule(date):
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
-    await message.reply("Привет, Иня!")
+    await message.reply("Привет, Иня!")  # Моя любимая
     kb = types.reply_keyboard.ReplyKeyboardMarkup()
     sced = 'Расписание'
-    kb.add(sced)
+    kb.row(sced)
     await message.answer('Чего нада?!', reply_markup=kb)
 
 
 @dp.message_handler(lambda message: message.text == 'Расписание')
 async def schedule(message: types.Message):
     kb = types.reply_keyboard.ReplyKeyboardMarkup()
-    kb.add('Сегодня', 'Завтра')
+    kb.row('Сегодня', 'Завтра', 'Другой день')
     await message.answer('Напиши дату или выбери из предложенного!', reply_markup=kb)
 
 
 @dp.message_handler(lambda message: message.text == 'Сегодня')
-async def schedule(message: types.Message):
-    await message.answer(get_schedule(message.date))
+async def today(message: types.Message):
+    await message.answer(get_schedule(message.date + datetime.timedelta(hours=5)))  # TODO: поправить часовой пояс
 
 
 @dp.message_handler(lambda message: message.text == 'Завтра')
-async def schedule(message: types.Message):
-    await message.answer(get_schedule(message.date + datetime.timedelta(days=1)))
+async def tomorrow(message: types.Message):
+    await message.answer(get_schedule(message.date + datetime.timedelta(days=1, hours=5)))
+
+
+@dp.message_handler(lambda message: message.text == 'Другой день')
+async def other_day(message: types.Message):
+    await message.answer('Выберите день, Госпожа!', reply_markup=await SimpleCalendar().start_calendar())
+
+
+@dp.callback_query_handler(simple_cal_callback.filter())
+async def process_simple_calendar(callback_query: types.CallbackQuery, callback_data: dict):
+    selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+    if selected:
+        await callback_query.message.answer(get_schedule(date + datetime.timedelta(days=1)))
 
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    executor.start_polling(dp, skip_updates=True, timeout=100)
