@@ -3,10 +3,40 @@ from bs4 import BeautifulSoup
 from aiogram import Bot, Dispatcher, executor, types
 import datetime
 from aiogram_calendar import SimpleCalendar, simple_cal_callback
+import sqlalchemy
+from sqlalchemy.orm import mapper, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 API_TOKEN = '1767109592:AAHPy8GabHwBMirbfad6xWNdLknKSIbWUAw'
 bot = Bot(token=API_TOKEN, timeout=100)
 dp = Dispatcher(bot)
+
+
+engine = sqlalchemy.create_engine('sqlite:///MyLove.db', echo=True)
+base = declarative_base()
+
+
+class Task(base):
+    __tablename__ = 'Tasks'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+    text = sqlalchemy.Column(sqlalchemy.String)
+    date = sqlalchemy.Column(sqlalchemy.DateTime)
+
+    def __init__(self, text, date):
+        self.text = text
+        self.date = date
+
+    def __repr__(self):
+        return "<User('%s','%s')>" % (self.text, self.date)
+
+
+Session = sessionmaker()
+Session.configure(bind=engine)
+session = Session()
+base.metadata.create_all(engine)
+
+session.add(Task('Вытереться', datetime.datetime.now()))
+session.commit()
 
 
 def next_day(day):
@@ -109,7 +139,7 @@ async def other_day(message: types.Message):
 @dp.callback_query_handler(simple_cal_callback.filter())
 async def process_simple_calendar(callback_query: types.CallbackQuery, callback_data: dict):
     selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
-    text = get_schedule(date + datetime.timedelta(days=1))
+    text = get_schedule(date + datetime.timedelta(hours=5))
     if selected:
         if text:
             await callback_query.message.answer(text)
