@@ -6,10 +6,13 @@ from aiogram_calendar import SimpleCalendar, simple_cal_callback
 import sqlalchemy
 from sqlalchemy.orm import mapper, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from aiogram.dispatcher import FSMContext
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher.filters.state import State, StatesGroup
 
 API_TOKEN = '1767109592:AAHPy8GabHwBMirbfad6xWNdLknKSIbWUAw'
 bot = Bot(token=API_TOKEN, timeout=100)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=MemoryStorage())
 
 
 engine = sqlalchemy.create_engine('sqlite:///MyLove.db', echo=True)
@@ -20,22 +23,15 @@ class Task(base):
     __tablename__ = 'Tasks'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     text = sqlalchemy.Column(sqlalchemy.String)
-    date = sqlalchemy.Column(sqlalchemy.DateTime)
 
-    def __init__(self, text, date):
+    def __init__(self, text):
         self.text = text
-        self.date = date
-
-    def __repr__(self):
-        return "<User('%s','%s')>" % (self.text, self.date)
 
 
 Session = sessionmaker()
 Session.configure(bind=engine)
 session = Session()
 base.metadata.create_all(engine)
-
-session.add(Task('Вытереться', datetime.datetime.now()))
 session.commit()
 
 
@@ -98,18 +94,20 @@ def get_schedule(date):
 
 
 @dp.message_handler(commands=['start'])
+@dp.message_handler(lambda message: message.text == 'В начало')
 async def send_welcome(message: types.Message):
-    await message.reply("Привет, Иня!")  # Моя любимая
-    kb = types.reply_keyboard.ReplyKeyboardMarkup()
-    sced = 'Расписание'
-    kb.row(sced)
+    await message.answer("Иня!")  # Моя любимая
+    kb = types.reply_keyboard.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row('Расписание')
+    kb.row('Задачи')
     await message.answer('Чего нада?!', reply_markup=kb)
 
 
 @dp.message_handler(lambda message: message.text == 'Расписание')
 async def schedule(message: types.Message):
-    kb = types.reply_keyboard.ReplyKeyboardMarkup()
+    kb = types.reply_keyboard.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row('Сегодня', 'Завтра', 'Другой день')
+    kb.row('В начало')
     await message.answer('Напиши дату или выбери из предложенного!', reply_markup=kb)
 
 
@@ -145,6 +143,35 @@ async def process_simple_calendar(callback_query: types.CallbackQuery, callback_
             await callback_query.message.answer(text)
         else:
             await callback_query.message.answer('Пар нет :3')
+
+
+class CreateTask(StatesGroup):
+    waiting_for_description = State()
+
+
+@dp.message_handler(content_types=[types.ContentType.ANIMATION])
+async def echo_document(message: types.Message):
+    await message.reply_animation(message.animation.file_id)
+
+
+@dp.message_handler(lambda message: message.text == 'Задачи')
+async def tasks(message: types.Message):
+    kb = types.reply_keyboard.ReplyKeyboardMarkup(resize_keyboard=True).add('Посмотреть', 'Создать', 'В начало')
+    await message.answer('Чего нада?!', reply_markup=kb)
+
+
+@dp.message_handler(lambda message: message.text == 'Создать')
+async def task_create(message: types.Message):
+    await message.answer('Выкладывай')
+    await CreateTask.waiting_for_description.set()
+
+
+@dp.message_handler(state=CreateTask.waiting_for_description)
+async def task_set_description(message: types.Message, state: FSMContext):
+    session.add(Task(message.text))
+    await state.finish()
+    await message.answer('Таск креатед')
+    await send_welcome(message)
 
 
 if __name__ == '__main__':
