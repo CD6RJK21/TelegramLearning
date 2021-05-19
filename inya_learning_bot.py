@@ -27,6 +27,9 @@ class Task(base):
     def __init__(self, text):
         self.text = text
 
+    def __repr__(self):
+        return '{}|{}'.format(str(self.id), self.text)
+
 
 Session = sessionmaker()
 Session.configure(bind=engine)
@@ -96,7 +99,8 @@ def get_schedule(date):
 @dp.message_handler(commands=['start'])
 @dp.message_handler(lambda message: message.text == 'В начало')
 async def send_welcome(message: types.Message):
-    await message.answer("Иня!")  # Моя любимая
+    if message.is_command():
+        await message.answer("Иня!")  # Моя любимая
     kb = types.reply_keyboard.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row('Расписание')
     kb.row('Задачи')
@@ -149,6 +153,10 @@ class CreateTask(StatesGroup):
     waiting_for_description = State()
 
 
+class DeleteTask(StatesGroup):
+    waiting_for_confirmation = State()
+
+
 @dp.message_handler(content_types=[types.ContentType.ANIMATION])
 async def echo_document(message: types.Message):
     await message.reply_animation(message.animation.file_id)
@@ -169,9 +177,48 @@ async def task_create(message: types.Message):
 @dp.message_handler(state=CreateTask.waiting_for_description)
 async def task_set_description(message: types.Message, state: FSMContext):
     session.add(Task(message.text))
+    session.commit()
     await state.finish()
     await message.answer('Таск креатед')
     await send_welcome(message)
+
+
+@dp.message_handler(lambda message: message.text == 'Посмотреть')
+async def task_check(message: types.Message):
+    # text = 'Вот твои задачи:3\n'
+    # query = session.query(Task).all()
+    # for task in query:
+    #     text += str(task) + '\n'
+    # await message.answer(text)
+    query = session.query(Task).all()
+    kb = types.InlineKeyboardMarkup()
+    for task in query:
+        kb.add(types.InlineKeyboardButton(text=task.text, callback_data='taskid=' + str(task.id)))
+    await message.answer('Вот твои задачи:3', reply_markup=kb)
+
+
+@dp.callback_query_handler(lambda call: 'taskid' in call.data)
+async def task_delete_conformation(call: types.CallbackQuery):
+    taskid = int(call.data.split('=')[-1])
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton(text='Дя', callback_data='del_conform=' + str(taskid)))
+    kb.add(types.InlineKeyboardButton(text='Найн', callback_data='del_cancel'))
+    await call.message.answer('ТЫ хочешь удалить задачу????', reply_markup=kb)
+
+
+@dp.callback_query_handler(lambda call: 'del_conform' in call.data)
+async def task_delete(call: types.CallbackQuery):
+    taskid = int(call.data.split('=')[-1])
+    # session.delete(session.query(Task).filter(Task.id == taskid))
+    session.query(Task).filter(Task.id == taskid).delete()
+    session.commit()
+    await call.message.answer('Задаче пиздец😉')
+
+
+@dp.callback_query_handler(lambda call: 'del_cancel' in call.data)
+async def task_delete(call: types.CallbackQuery):
+    await call.message.answer('Ну нет так нет..........')
+    await tasks(call.message)
 
 
 if __name__ == '__main__':
