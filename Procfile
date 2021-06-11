@@ -1,1 +1,1 @@
-inya-bot: python inya_learning_bot.py
+web: python inya_learning_bot.py
