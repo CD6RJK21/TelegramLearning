@@ -1,1 +1,1 @@
-web: python inya_learning_bot.py
+web: python student_assistant.py
