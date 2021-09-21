@@ -100,11 +100,11 @@ def get_schedule(date):
 @dp.message_handler(lambda message: message.text == 'В начало')
 async def send_welcome(message: types.Message):
     if message.is_command():
-        await message.answer("Иня!")  # Моя любимая
+        await message.answer("Привет!")
     kb = types.reply_keyboard.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row('Расписание')
     kb.row('Задачи')
-    await message.answer('Чего нада?!', reply_markup=kb)
+    await message.answer('Введи запрос.', reply_markup=kb)
 
 
 @dp.message_handler(lambda message: message.text == 'Расписание')
@@ -135,7 +135,7 @@ async def tomorrow(message: types.Message):
 
 @dp.message_handler(lambda message: message.text == 'Другой день')
 async def other_day(message: types.Message):
-    await message.answer('Выберите день, Госпожа!', reply_markup=await SimpleCalendar().start_calendar())
+    await message.answer('Выберите день', reply_markup=await SimpleCalendar().start_calendar())
 
 
 @dp.callback_query_handler(simple_cal_callback.filter())
@@ -165,7 +165,7 @@ async def echo_document(message: types.Message):
 @dp.message_handler(lambda message: message.text == 'Задачи')
 async def tasks(message: types.Message):
     kb = types.reply_keyboard.ReplyKeyboardMarkup(resize_keyboard=True).add('Посмотреть', 'Создать', 'В начало')
-    await message.answer('Чего нада?!', reply_markup=kb)
+    await message.answer('Выберите', reply_markup=kb)
 
 
 @dp.message_handler(lambda message: message.text == 'Создать')
@@ -185,11 +185,6 @@ async def task_set_description(message: types.Message, state: FSMContext):
 
 @dp.message_handler(lambda message: message.text == 'Посмотреть')
 async def task_check(message: types.Message):
-    # text = 'Вот твои задачи:3\n'
-    # query = session.query(Task).all()
-    # for task in query:
-    #     text += str(task) + '\n'
-    # await message.answer(text)
     query = session.query(Task).all()
     kb = types.InlineKeyboardMarkup()
     for task in query:
@@ -201,9 +196,9 @@ async def task_check(message: types.Message):
 async def task_delete_conformation(call: types.CallbackQuery):
     taskid = int(call.data.split('=')[-1])
     kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton(text='Дя', callback_data='del_conform=' + str(taskid)))
-    kb.add(types.InlineKeyboardButton(text='Найн', callback_data='del_cancel'))
-    await call.message.answer('ТЫ хочешь удалить задачу????', reply_markup=kb)
+    kb.add(types.InlineKeyboardButton(text='Да', callback_data='del_conform=' + str(taskid)))
+    kb.add(types.InlineKeyboardButton(text='Нет', callback_data='del_cancel'))
+    await call.message.answer('Ты хочешь удалить задачу?', reply_markup=kb)
 
 
 @dp.callback_query_handler(lambda call: 'del_conform' in call.data)
@@ -212,12 +207,12 @@ async def task_delete(call: types.CallbackQuery):
     # session.delete(session.query(Task).filter(Task.id == taskid))
     session.query(Task).filter(Task.id == taskid).delete()
     session.commit()
-    await call.message.answer('Задаче пиздец😉')
+    await call.message.answer('Задача удалена!')
 
 
 @dp.callback_query_handler(lambda call: 'del_cancel' in call.data)
 async def task_delete(call: types.CallbackQuery):
-    await call.message.answer('Ну нет так нет..........')
+    await call.message.answer('Ну нет так нет...')
     await tasks(call.message)
 
 
