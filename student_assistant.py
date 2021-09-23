@@ -7,7 +7,6 @@ import sqlalchemy
 from sqlalchemy.orm import mapper, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from aiogram.dispatcher import FSMContext
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 API_TOKEN = '2038220557:AAFDrFsD1QK72-o3fe1u7Y-dkfj6xa7W2vI'
@@ -121,7 +120,7 @@ async def today(message: types.Message):
     if text:
         await message.answer(text)  # TODO: поправить часовой пояс
     else:
-        await message.answer('Пар нет :3')
+        await message.answer('Пар нет')
 
 
 @dp.message_handler(lambda message: message.text == 'Завтра')
@@ -130,7 +129,7 @@ async def tomorrow(message: types.Message):
     if text:
         await message.answer(text)
     else:
-        await message.answer('Пар нет :3')
+        await message.answer('Пар нет')
 
 
 @dp.message_handler(lambda message: message.text == 'Другой день')
@@ -146,7 +145,7 @@ async def process_simple_calendar(callback_query: types.CallbackQuery, callback_
         if text:
             await callback_query.message.answer(text)
         else:
-            await callback_query.message.answer('Пар нет :3')
+            await callback_query.message.answer('Пар нет')
 
 
 class CreateTask(StatesGroup):
@@ -189,7 +188,7 @@ async def task_check(message: types.Message):
     kb = types.InlineKeyboardMarkup()
     for task in query:
         kb.add(types.InlineKeyboardButton(text=task.text, callback_data='taskid=' + str(task.id)))
-    await message.answer('Вот твои задачи:3', reply_markup=kb)
+    await message.answer('Вот твои задачи', reply_markup=kb)
 
 
 @dp.callback_query_handler(lambda call: 'taskid' in call.data)
