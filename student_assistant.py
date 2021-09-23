@@ -14,7 +14,7 @@ bot = Bot(token=API_TOKEN, timeout=100)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
 
-engine = sqlalchemy.create_engine('sqlite:///MyLove.db', echo=True)
+engine = sqlalchemy.create_engine('sqlite:///Student_assistant.db', echo=True)
 base = declarative_base()
 
 
